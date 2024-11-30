@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center">Sugestão de Roleta</h2>
+
+        <div class="mb-3">
+            <label for="historico" class="form-label">Insira os 25 últimos números (separados por vírgula):</label>
+            <input type="text" id="historico" class="form-control" placeholder="Ex: 1,2,3,...">
+        </div>
+
+        <button class="btn btn-success w-100" onclick="gerarSugestoes()">Gerar Sugestões</button>
+
+        <h4 class="mt-4">Sugestões:</h4>
+        <div id="sugestoes" class="alert alert-info">Nenhuma sugestão ainda.</div>
+
+        <div class="mb-3 mt-4">
+            <label for="numero_saiu" class="form-label">Insira o número que saiu:</label>
+            <input type="number" id="numero_saiu" class="form-control" placeholder="Número que saiu">
+        </div>
+
+        <button class="btn btn-primary w-100" onclick="atualizarHistorico()">Atualizar Histórico e Sugestões</button>
+
+        <button class="btn btn-warning w-100 mt-3" onclick="clicarNosNumeros()">Clicar nos Números Sugeridos</button>
+    </div>
+
+    <script>
+        let sugestoes = [];  // Variável global para armazenar as sugestões
+
+        function gerarSugestoes() {
+            const historico = document.getElementById('historico').value.split(',').map(Number);
+
+            axios.post('/calculate', { historico })
+                .then(response => {
+                    sugestoes = response.data.sugestoes;
+                    document.getElementById('sugestoes').textContent = sugestoes.join(', ');
+                })
+                .catch(error => {
+                    console.error(error);
+                    document.getElementById('sugestoes').textContent = 'Erro ao calcular sugestões.';
+                });
+        }
+
+        function atualizarHistorico() {
+            const numeroSido = document.getElementById('numero_saiu').value.trim();
+            if (!numeroSido || isNaN(numeroSido)) {
+                alert("Por favor, insira um número válido.");
+                return;
+            }
+
+            // Atualizar o histórico com o novo número
+            const historico = document.getElementById('historico').value.split(',').map(Number);
+            if (historico.length === 25) {
+                historico.shift();  // Remove o primeiro número se a lista tiver 25
+            }
+            historico.push(parseInt(numeroSido));
+
+            // Enviar o histórico para o servidor para gerar as novas sugestões
+            axios.post('/calculate', { historico })
+                .then(response => {
+                    sugestoes = response.data.sugestoes;
+                    document.getElementById('sugestoes').textContent = sugestoes.join(', ');
+                    // Atualizar o campo de histórico
+                    document.getElementById('historico').value = historico.join(',');
+                    document.getElementById('numero_saiu').value = '';  // Limpar o campo
+                })
+                .catch(error => {
+                    console.error(error);
+                    alert("Erro ao atualizar o histórico.");
+                });
+        }
+
+        function clicarNosNumeros() {
+            if (sugestoes.length === 0) {
+                alert("Primeiro gere as sugestões.");
+                return;
+            }
+
+            axios.post('/click', { numeros: sugestoes })
+                .then(response => {
+                    alert("Clique nos números realizados com sucesso!");
+                })
+                .catch(error => {
+                    console.error(error);
+                    alert("Erro ao realizar o clique.");
+                });
+        }
+    </script>
+</body>
+</html>
